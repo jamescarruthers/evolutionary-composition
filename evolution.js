@@ -57,33 +57,54 @@ const Evolution = (() => {
   // ─── Fitness components ───────────────────────────────────────
 
   /**
-   * Colour balance: penalise compositions where palette colours
-   * are unevenly distributed across canvas quadrants.
+   * Colour balance: reward compositions that use all palette colours
+   * and distribute them evenly across the canvas.
    */
   function fitnessColourBalance(genes, palette) {
     if (palette.length < 2) return 1;
-    // Count colour usage per quadrant
-    const quadrants = [[], [], [], []]; // TL, TR, BL, BR
+
+    // 1. Palette coverage: reward using all available colours
+    const usedColors = new Set(genes.map((g) => g.colorIdx));
+    const coverage = usedColors.size / palette.length;
+
+    // 2. Per-colour spatial spread: for each used colour, measure how
+    //    spread out its shapes are (reward variety across quadrants)
+    const colorQuadrants = new Map();
     for (const g of genes) {
       const qi = (g.x < W / 2 ? 0 : 1) + (g.y < H / 2 ? 0 : 2);
-      quadrants[qi].push(g.colorIdx);
+      if (!colorQuadrants.has(g.colorIdx)) colorQuadrants.set(g.colorIdx, new Set());
+      colorQuadrants.get(g.colorIdx).add(qi);
     }
-    // For each quadrant, measure how many distinct colours appear
-    let totalDistinct = 0;
-    for (const q of quadrants) {
-      const unique = new Set(q).size;
-      totalDistinct += unique;
+    let spreadScore = 0;
+    for (const quads of colorQuadrants.values()) {
+      spreadScore += quads.size / 4; // 1.0 if colour appears in all 4 quadrants
     }
-    const maxPossible = Math.min(palette.length, genes.length) * 4;
-    return totalDistinct / maxPossible;
+    spreadScore /= Math.max(1, colorQuadrants.size);
+
+    // 3. Count balance: penalise if one colour dominates
+    const colorCounts = new Array(palette.length).fill(0);
+    for (const g of genes) colorCounts[g.colorIdx]++;
+    const idealCount = genes.length / palette.length;
+    let countVariance = 0;
+    for (const c of colorCounts) {
+      countVariance += (c - idealCount) * (c - idealCount);
+    }
+    countVariance /= palette.length;
+    const maxCountVariance = idealCount * idealCount;
+    const countBalance = maxCountVariance > 0
+      ? 1 - Math.min(1, countVariance / maxCountVariance)
+      : 1;
+
+    return coverage * 0.3 + spreadScore * 0.4 + countBalance * 0.3;
   }
 
   /**
    * Spatial distribution: reward even spread across canvas.
-   * Uses a grid-based approach — count shapes per cell, penalise variance.
+   * Combines grid-based variance with edge margin reward.
    */
   function fitnessSpatialDistribution(genes) {
-    const gridSize = 4;
+    // Grid occupancy — 3x3 is less harsh than 4x4
+    const gridSize = 3;
     const cellW = W / gridSize;
     const cellH = H / gridSize;
     const counts = new Array(gridSize * gridSize).fill(0);
@@ -94,31 +115,49 @@ const Evolution = (() => {
       counts[cy * gridSize + cx]++;
     }
 
+    // Reward occupied cells (not empty) rather than perfect uniformity
+    const occupied = counts.filter((c) => c > 0).length;
+    const occupancy = occupied / counts.length;
+
+    // Penalise high variance (clumping)
     const mean = genes.length / counts.length;
     let variance = 0;
     for (const c of counts) {
       variance += (c - mean) * (c - mean);
     }
     variance /= counts.length;
-
-    // Normalise: if all shapes in one cell, variance ~ mean^2
     const maxVariance = mean * mean;
-    return maxVariance > 0 ? 1 - Math.min(1, variance / maxVariance) : 1;
+    const uniformity = maxVariance > 0
+      ? 1 - Math.min(1, Math.sqrt(variance / maxVariance))
+      : 1;
+
+    // Reward shapes that aren't all jammed to the edges or centre
+    let marginScore = 0;
+    const margin = 40;
+    for (const g of genes) {
+      const inBounds = g.x > margin && g.x < W - margin &&
+                       g.y > margin && g.y < H - margin;
+      marginScore += inBounds ? 1 : 0.5;
+    }
+    marginScore /= genes.length;
+
+    return occupancy * 0.4 + uniformity * 0.35 + marginScore * 0.25;
   }
 
   /**
    * Size-luminosity rule: brighter, more saturated colours should be smaller;
    * paler colours should be larger.
+   * Uses a Gaussian falloff so there's always a gradient toward the ideal.
    */
   function fitnessSizeLuminosity(genes, palette) {
     let score = 0;
     for (const g of genes) {
       const rgb = Color.hexToRgb(palette[g.colorIdx]);
       const idealMul = Color.sizeForColour(rgb.r, rgb.g, rgb.b);
-      // Ideal radius range: 20-120 * idealMul
       const idealRadius = 60 * idealMul;
-      const diff = Math.abs(g.radius - idealRadius) / 100;
-      score += Math.max(0, 1 - diff);
+      const diff = g.radius - idealRadius;
+      // Gaussian: always > 0, strongest gradient near the ideal
+      score += Math.exp(-(diff * diff) / (2 * 50 * 50));
     }
     return score / genes.length;
   }
@@ -229,27 +268,42 @@ const Evolution = (() => {
       if (Math.random() > mutationRate) return gene;
 
       const g = { ...gene };
-      const field = Math.floor(Math.random() * 6);
+      const field = Math.floor(Math.random() * 7);
 
       switch (field) {
         case 0: // position
           g.x = Math.max(0, Math.min(W, g.x + (Math.random() - 0.5) * 120));
           g.y = Math.max(0, Math.min(H, g.y + (Math.random() - 0.5) * 120));
           break;
-        case 1: // radius
+        case 1: // radius (random walk)
           g.radius = Math.max(12, Math.min(150, g.radius + (Math.random() - 0.5) * 40));
           break;
         case 2: // rotation
           g.rotation += (Math.random() - 0.5) * 0.8;
           break;
-        case 3: // colour
+        case 3: // colour — also nudge radius toward the new colour's ideal
           g.colorIdx = Math.floor(Math.random() * palette.length);
+          {
+            const rgb = Color.hexToRgb(palette[g.colorIdx]);
+            const ideal = 60 * Color.sizeForColour(rgb.r, rgb.g, rgb.b);
+            // Move 40-70% toward ideal (with some randomness to preserve exploration)
+            const blend = 0.4 + Math.random() * 0.3;
+            g.radius = Math.max(12, Math.min(150, g.radius + (ideal - g.radius) * blend));
+          }
           break;
         case 4: // shape type
           g.shapeType = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
           break;
         case 5: // opacity
           g.opacity = Math.max(0.2, Math.min(1, g.opacity + (Math.random() - 0.5) * 0.3));
+          break;
+        case 6: // radius nudge toward ideal for current colour
+          {
+            const rgb = Color.hexToRgb(palette[g.colorIdx]);
+            const ideal = 60 * Color.sizeForColour(rgb.r, rgb.g, rgb.b);
+            const blend = 0.2 + Math.random() * 0.3;
+            g.radius = Math.max(12, Math.min(150, g.radius + (ideal - g.radius) * blend));
+          }
           break;
       }
       return g;
@@ -261,21 +315,17 @@ const Evolution = (() => {
    * Returns { population, fitnesses, bestIdx, bestFitness }.
    */
   function evolveGeneration(population, palette, shapeTypes, mutationRate, weights) {
-    // Evaluate fitness
+    // Evaluate fitness of current population (used for selection)
     const fitnesses = population.map((ind) => fitness(ind, palette, weights));
 
-    // Find best
-    let bestIdx = 0;
-    for (let i = 1; i < fitnesses.length; i++) {
-      if (fitnesses[i] > fitnesses[bestIdx]) bestIdx = i;
-    }
-
-    // Elitism: keep top 2
+    // Elitism: keep top 2 from current population
     const sorted = fitnesses.map((f, i) => ({ f, i }))
       .sort((a, b) => b.f - a.f);
+    const elite1Idx = sorted[0].i;
+    const elite2Idx = sorted.length > 1 ? sorted[1].i : sorted[0].i;
     const newPop = [
-      population[sorted[0].i].map((g) => ({ ...g })),
-      population[sorted[1] ? sorted[1].i : sorted[0].i].map((g) => ({ ...g })),
+      population[elite1Idx].map((g) => ({ ...g })),
+      population[elite2Idx].map((g) => ({ ...g })),
     ];
 
     // Fill rest with offspring
@@ -287,11 +337,18 @@ const Evolution = (() => {
       newPop.push(child);
     }
 
+    // Evaluate fitness of the NEW population to find the actual best
+    const newFitnesses = newPop.map((ind) => fitness(ind, palette, weights));
+    let bestIdx = 0;
+    for (let i = 1; i < newFitnesses.length; i++) {
+      if (newFitnesses[i] > newFitnesses[bestIdx]) bestIdx = i;
+    }
+
     return {
       population: newPop,
-      fitnesses: fitnesses,
-      bestIdx: 0, // after elitism, best is first
-      bestFitness: fitnesses[bestIdx],
+      fitnesses: newFitnesses,
+      bestIdx,
+      bestFitness: newFitnesses[bestIdx],
     };
   }
 
