@@ -17,18 +17,19 @@ const Evolution = (() => {
   const H = 800;
 
   /** Create a random shape gene. */
-  function randomGene(palette, shapeTypes, index, total) {
+  function randomGene(palette, shapeTypes, x, y, minSize, maxSize) {
     const colorIdx = Math.floor(Math.random() * palette.length);
     const rgb = Color.hexToRgb(palette[colorIdx]);
     const idealSize = Color.sizeForColour(rgb.r, rgb.g, rgb.b);
-    // Base radius between 20 and 120, scaled by colour
-    const baseRadius = 20 + Math.random() * 100;
+    // Base radius within the configured range, scaled by colour
+    const range = maxSize - minSize;
+    const baseRadius = minSize + Math.random() * range;
     const radius = baseRadius * idealSize;
 
     return {
-      x: Math.random() * W,
-      y: Math.random() * H,
-      radius: Math.max(12, Math.min(150, radius)),
+      x,
+      y,
+      radius: Math.max(minSize, Math.min(maxSize, radius)),
       rotation: Math.random() * Math.PI * 2,
       colorIdx,
       shapeType: shapeTypes[Math.floor(Math.random() * shapeTypes.length)],
@@ -37,19 +38,41 @@ const Evolution = (() => {
   }
 
   /** Create a random individual (composition). */
-  function randomIndividual(palette, shapeTypes, shapeCount) {
+  function randomIndividual(palette, shapeTypes, shapeCount, minSize, maxSize, useClustering) {
     const genes = [];
-    for (let i = 0; i < shapeCount; i++) {
-      genes.push(randomGene(palette, shapeTypes, i, shapeCount));
+
+    if (useClustering) {
+      // Pick 3-5 cluster centres spread across the canvas
+      const numClusters = 3 + Math.floor(Math.random() * 3);
+      const centres = [];
+      const margin = 80;
+      for (let c = 0; c < numClusters; c++) {
+        centres.push({
+          x: margin + Math.random() * (W - margin * 2),
+          y: margin + Math.random() * (H - margin * 2),
+        });
+      }
+      for (let i = 0; i < shapeCount; i++) {
+        const centre = centres[Math.floor(Math.random() * centres.length)];
+        const spread = 80 + Math.random() * 120;
+        const x = Math.max(0, Math.min(W, centre.x + (Math.random() - 0.5) * spread * 2));
+        const y = Math.max(0, Math.min(H, centre.y + (Math.random() - 0.5) * spread * 2));
+        genes.push(randomGene(palette, shapeTypes, x, y, minSize, maxSize));
+      }
+    } else {
+      for (let i = 0; i < shapeCount; i++) {
+        genes.push(randomGene(palette, shapeTypes, Math.random() * W, Math.random() * H, minSize, maxSize));
+      }
     }
+
     return genes;
   }
 
   /** Create initial population. */
-  function createPopulation(popSize, palette, shapeTypes, shapeCount) {
+  function createPopulation(popSize, palette, shapeTypes, shapeCount, minSize, maxSize, useClustering) {
     const pop = [];
     for (let i = 0; i < popSize; i++) {
-      pop.push(randomIndividual(palette, shapeTypes, shapeCount));
+      pop.push(randomIndividual(palette, shapeTypes, shapeCount, minSize, maxSize, useClustering));
     }
     return pop;
   }
@@ -149,15 +172,17 @@ const Evolution = (() => {
    * paler colours should be larger.
    * Uses a Gaussian falloff so there's always a gradient toward the ideal.
    */
-  function fitnessSizeLuminosity(genes, palette) {
+  function fitnessSizeLuminosity(genes, palette, minSize, maxSize) {
+    const midSize = (minSize + maxSize) / 2;
     let score = 0;
     for (const g of genes) {
       const rgb = Color.hexToRgb(palette[g.colorIdx]);
       const idealMul = Color.sizeForColour(rgb.r, rgb.g, rgb.b);
-      const idealRadius = 60 * idealMul;
+      const idealRadius = midSize * idealMul;
       const diff = g.radius - idealRadius;
       // Gaussian: always > 0, strongest gradient near the ideal
-      score += Math.exp(-(diff * diff) / (2 * 50 * 50));
+      const sigma = (maxSize - minSize) * 0.4;
+      score += Math.exp(-(diff * diff) / (2 * sigma * sigma));
     }
     return score / genes.length;
   }
@@ -218,10 +243,10 @@ const Evolution = (() => {
   }
 
   /** Combined fitness function. */
-  function fitness(genes, palette, weights) {
+  function fitness(genes, palette, weights, minSize, maxSize) {
     const fColor = fitnessColourBalance(genes, palette);
     const fSpatial = fitnessSpatialDistribution(genes);
-    const fLum = fitnessSizeLuminosity(genes, palette);
+    const fLum = fitnessSizeLuminosity(genes, palette, minSize, maxSize);
     const fOverlap = fitnessOverlap(genes);
     const fWeight = fitnessVisualWeight(genes, palette);
 
@@ -263,7 +288,7 @@ const Evolution = (() => {
   }
 
   /** Mutate an individual. */
-  function mutate(individual, mutationRate, palette, shapeTypes) {
+  function mutate(individual, mutationRate, palette, shapeTypes, minSize, maxSize) {
     return individual.map((gene) => {
       if (Math.random() > mutationRate) return gene;
 
@@ -276,7 +301,7 @@ const Evolution = (() => {
           g.y = Math.max(0, Math.min(H, g.y + (Math.random() - 0.5) * 120));
           break;
         case 1: // radius (random walk)
-          g.radius = Math.max(12, Math.min(150, g.radius + (Math.random() - 0.5) * 40));
+          g.radius = Math.max(minSize, Math.min(maxSize, g.radius + (Math.random() - 0.5) * (maxSize - minSize) * 0.25));
           break;
         case 2: // rotation
           g.rotation += (Math.random() - 0.5) * 0.8;
@@ -285,10 +310,11 @@ const Evolution = (() => {
           g.colorIdx = Math.floor(Math.random() * palette.length);
           {
             const rgb = Color.hexToRgb(palette[g.colorIdx]);
-            const ideal = 60 * Color.sizeForColour(rgb.r, rgb.g, rgb.b);
+            const midSize = (minSize + maxSize) / 2;
+            const ideal = midSize * Color.sizeForColour(rgb.r, rgb.g, rgb.b);
             // Move 40-70% toward ideal (with some randomness to preserve exploration)
             const blend = 0.4 + Math.random() * 0.3;
-            g.radius = Math.max(12, Math.min(150, g.radius + (ideal - g.radius) * blend));
+            g.radius = Math.max(minSize, Math.min(maxSize, g.radius + (ideal - g.radius) * blend));
           }
           break;
         case 4: // shape type
@@ -300,9 +326,10 @@ const Evolution = (() => {
         case 6: // radius nudge toward ideal for current colour
           {
             const rgb = Color.hexToRgb(palette[g.colorIdx]);
-            const ideal = 60 * Color.sizeForColour(rgb.r, rgb.g, rgb.b);
+            const midSize = (minSize + maxSize) / 2;
+            const ideal = midSize * Color.sizeForColour(rgb.r, rgb.g, rgb.b);
             const blend = 0.2 + Math.random() * 0.3;
-            g.radius = Math.max(12, Math.min(150, g.radius + (ideal - g.radius) * blend));
+            g.radius = Math.max(minSize, Math.min(maxSize, g.radius + (ideal - g.radius) * blend));
           }
           break;
       }
@@ -314,9 +341,9 @@ const Evolution = (() => {
    * Run one generation: evaluate, select, crossover, mutate.
    * Returns { population, fitnesses, bestIdx, bestFitness }.
    */
-  function evolveGeneration(population, palette, shapeTypes, mutationRate, weights) {
+  function evolveGeneration(population, palette, shapeTypes, mutationRate, weights, minSize, maxSize) {
     // Evaluate fitness of current population (used for selection)
-    const fitnesses = population.map((ind) => fitness(ind, palette, weights));
+    const fitnesses = population.map((ind) => fitness(ind, palette, weights, minSize, maxSize));
 
     // Elitism: keep top 2 from current population
     const sorted = fitnesses.map((f, i) => ({ f, i }))
@@ -333,12 +360,12 @@ const Evolution = (() => {
       const parentA = tournamentSelect(population, fitnesses);
       const parentB = tournamentSelect(population, fitnesses);
       let child = crossover(parentA, parentB);
-      child = mutate(child, mutationRate, palette, shapeTypes);
+      child = mutate(child, mutationRate, palette, shapeTypes, minSize, maxSize);
       newPop.push(child);
     }
 
     // Evaluate fitness of the NEW population to find the actual best
-    const newFitnesses = newPop.map((ind) => fitness(ind, palette, weights));
+    const newFitnesses = newPop.map((ind) => fitness(ind, palette, weights, minSize, maxSize));
     let bestIdx = 0;
     for (let i = 1; i < newFitnesses.length; i++) {
       if (newFitnesses[i] > newFitnesses[bestIdx]) bestIdx = i;
