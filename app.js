@@ -17,6 +17,11 @@
 
   const shapeCountInput = document.getElementById('shape-count');
   const shapeCountVal = document.getElementById('shape-count-val');
+  const minSizeInput = document.getElementById('min-size');
+  const minSizeVal = document.getElementById('min-size-val');
+  const maxSizeInput = document.getElementById('max-size');
+  const maxSizeVal = document.getElementById('max-size-val');
+  const useClusteringInput = document.getElementById('use-clustering');
   const popSizeInput = document.getElementById('pop-size');
   const popSizeVal = document.getElementById('pop-size-val');
   const mutationRateInput = document.getElementById('mutation-rate');
@@ -108,6 +113,22 @@
   shapeCountInput.addEventListener('input', () => {
     shapeCountVal.textContent = shapeCountInput.value;
   });
+  minSizeInput.addEventListener('input', () => {
+    minSizeVal.textContent = minSizeInput.value;
+    // Enforce min < max
+    if (parseInt(minSizeInput.value) >= parseInt(maxSizeInput.value)) {
+      maxSizeInput.value = Math.min(parseInt(maxSizeInput.max), parseInt(minSizeInput.value) + 20);
+      maxSizeVal.textContent = maxSizeInput.value;
+    }
+  });
+  maxSizeInput.addEventListener('input', () => {
+    maxSizeVal.textContent = maxSizeInput.value;
+    // Enforce min < max
+    if (parseInt(maxSizeInput.value) <= parseInt(minSizeInput.value)) {
+      minSizeInput.value = Math.max(parseInt(minSizeInput.min), parseInt(maxSizeInput.value) - 20);
+      minSizeVal.textContent = minSizeInput.value;
+    }
+  });
   popSizeInput.addEventListener('input', () => {
     popSizeVal.textContent = popSizeInput.value;
   });
@@ -125,8 +146,11 @@
     const shapeTypes = getShapeTypes();
     const popSize = parseInt(popSizeInput.value);
     const shapeCount = parseInt(shapeCountInput.value);
+    const minSize = parseInt(minSizeInput.value);
+    const maxSize = parseInt(maxSizeInput.value);
+    const useClustering = useClusteringInput.checked;
 
-    population = Evolution.createPopulation(popSize, palette, shapeTypes, shapeCount);
+    population = Evolution.createPopulation(popSize, palette, shapeTypes, shapeCount, minSize, maxSize, useClustering);
     generation = 0;
     prevBest = null;
     currentBest = population[0];
@@ -140,9 +164,11 @@
     const shapeTypes = getShapeTypes();
     const mutRate = parseInt(mutationRateInput.value) / 100;
     const weights = getWeights();
+    const minSize = parseInt(minSizeInput.value);
+    const maxSize = parseInt(maxSizeInput.value);
 
     const result = Evolution.evolveGeneration(
-      population, palette, shapeTypes, mutRate, weights
+      population, palette, shapeTypes, mutRate, weights, minSize, maxSize
     );
 
     population = result.population;

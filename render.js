@@ -53,6 +53,31 @@ const Render = (() => {
         ctx.fill();
         break;
 
+      case 'hexagon':
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i - Math.PI / 6;
+          const px = r * Math.cos(angle);
+          const py = r * Math.sin(angle);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
+
+      case 'star':
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const angle = (Math.PI / 5) * i - Math.PI / 2;
+          const rad = i % 2 === 0 ? r : r * 0.42;
+          const px = rad * Math.cos(angle);
+          const py = rad * Math.sin(angle);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
+
       default:
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, Math.PI * 2);

@@ -55,8 +55,18 @@
             <h2>Shapes</h2>
             <label>
               <span>Number of shapes</span>
-              <input type="range" id="shape-count" min="5" max="60" value="25">
-              <output id="shape-count-val">25</output>
+              <input type="range" id="shape-count" min="5" max="80" value="35">
+              <output id="shape-count-val">35</output>
+            </label>
+            <label>
+              <span>Min size</span>
+              <input type="range" id="min-size" min="4" max="60" value="8">
+              <output id="min-size-val">8</output>
+            </label>
+            <label>
+              <span>Max size</span>
+              <input type="range" id="max-size" min="40" max="240" value="180">
+              <output id="max-size-val">180</output>
             </label>
             <label>
               <span>Shape types</span>
@@ -65,7 +75,12 @@
                 <label class="chip"><input type="checkbox" value="rect" checked> Rectangles</label>
                 <label class="chip"><input type="checkbox" value="triangle" checked> Triangles</label>
                 <label class="chip"><input type="checkbox" value="ellipse" checked> Ellipses</label>
+                <label class="chip"><input type="checkbox" value="hexagon" checked> Hexagons</label>
+                <label class="chip"><input type="checkbox" value="star" checked> Stars</label>
               </div>
+            </label>
+            <label class="chip" style="display:inline-flex;margin-top:6px;">
+              <input type="checkbox" id="use-clustering"> Cluster shapes
             </label>
           </section>
 
