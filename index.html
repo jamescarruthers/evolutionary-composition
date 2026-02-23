@@ -23,98 +23,100 @@
       </div>
 
       <aside id="controls">
-        <section>
-          <h2>Palette</h2>
-          <div id="palette">
-            <div class="swatch-row">
-              <input type="color" class="swatch" value="#E63946">
-              <button class="remove-swatch" title="Remove">&times;</button>
+        <div class="controls-scroll">
+          <section>
+            <h2>Palette</h2>
+            <div id="palette">
+              <div class="swatch-row">
+                <input type="color" class="swatch" value="#E63946">
+                <button class="remove-swatch" title="Remove">&times;</button>
+              </div>
+              <div class="swatch-row">
+                <input type="color" class="swatch" value="#457B9D">
+                <button class="remove-swatch" title="Remove">&times;</button>
+              </div>
+              <div class="swatch-row">
+                <input type="color" class="swatch" value="#1D3557">
+                <button class="remove-swatch" title="Remove">&times;</button>
+              </div>
+              <div class="swatch-row">
+                <input type="color" class="swatch" value="#F1FAEE">
+                <button class="remove-swatch" title="Remove">&times;</button>
+              </div>
+              <div class="swatch-row">
+                <input type="color" class="swatch" value="#A8DADC">
+                <button class="remove-swatch" title="Remove">&times;</button>
+              </div>
             </div>
-            <div class="swatch-row">
-              <input type="color" class="swatch" value="#457B9D">
-              <button class="remove-swatch" title="Remove">&times;</button>
-            </div>
-            <div class="swatch-row">
-              <input type="color" class="swatch" value="#1D3557">
-              <button class="remove-swatch" title="Remove">&times;</button>
-            </div>
-            <div class="swatch-row">
-              <input type="color" class="swatch" value="#F1FAEE">
-              <button class="remove-swatch" title="Remove">&times;</button>
-            </div>
-            <div class="swatch-row">
-              <input type="color" class="swatch" value="#A8DADC">
-              <button class="remove-swatch" title="Remove">&times;</button>
-            </div>
-          </div>
-          <button id="add-color">+ Add Colour</button>
-        </section>
+            <button id="add-color">+ Add Colour</button>
+          </section>
 
-        <section>
-          <h2>Shapes</h2>
-          <label>
-            <span>Number of shapes</span>
-            <input type="range" id="shape-count" min="5" max="60" value="25">
-            <output id="shape-count-val">25</output>
-          </label>
-          <label>
-            <span>Shape types</span>
-            <div id="shape-types">
-              <label class="chip"><input type="checkbox" value="circle" checked> Circles</label>
-              <label class="chip"><input type="checkbox" value="rect" checked> Rectangles</label>
-              <label class="chip"><input type="checkbox" value="triangle" checked> Triangles</label>
-              <label class="chip"><input type="checkbox" value="ellipse" checked> Ellipses</label>
-            </div>
-          </label>
-        </section>
+          <section>
+            <h2>Shapes</h2>
+            <label>
+              <span>Number of shapes</span>
+              <input type="range" id="shape-count" min="5" max="60" value="25">
+              <output id="shape-count-val">25</output>
+            </label>
+            <label>
+              <span>Shape types</span>
+              <div id="shape-types">
+                <label class="chip"><input type="checkbox" value="circle" checked> Circles</label>
+                <label class="chip"><input type="checkbox" value="rect" checked> Rectangles</label>
+                <label class="chip"><input type="checkbox" value="triangle" checked> Triangles</label>
+                <label class="chip"><input type="checkbox" value="ellipse" checked> Ellipses</label>
+              </div>
+            </label>
+          </section>
 
-        <section>
-          <h2>Evolution</h2>
-          <label>
-            <span>Population size</span>
-            <input type="range" id="pop-size" min="10" max="100" value="40">
-            <output id="pop-size-val">40</output>
-          </label>
-          <label>
-            <span>Mutation rate</span>
-            <input type="range" id="mutation-rate" min="1" max="50" value="15">
-            <output id="mutation-rate-val">15%</output>
-          </label>
-          <label>
-            <span>Speed</span>
-            <input type="range" id="speed" min="1" max="50" value="10">
-            <output id="speed-val">10</output>
-          </label>
-        </section>
+          <section>
+            <h2>Evolution</h2>
+            <label>
+              <span>Population size</span>
+              <input type="range" id="pop-size" min="10" max="100" value="40">
+              <output id="pop-size-val">40</output>
+            </label>
+            <label>
+              <span>Mutation rate</span>
+              <input type="range" id="mutation-rate" min="1" max="50" value="15">
+              <output id="mutation-rate-val">15%</output>
+            </label>
+            <label>
+              <span>Speed</span>
+              <input type="range" id="speed" min="1" max="50" value="10">
+              <output id="speed-val">10</output>
+            </label>
+          </section>
 
-        <section>
-          <h2>Harmony Weights</h2>
-          <label>
-            <span>Colour balance</span>
-            <input type="range" id="w-color" min="0" max="100" value="50">
-          </label>
-          <label>
-            <span>Spatial distribution</span>
-            <input type="range" id="w-spatial" min="0" max="100" value="50">
-          </label>
-          <label>
-            <span>Size-luminosity rule</span>
-            <input type="range" id="w-lum" min="0" max="100" value="70">
-          </label>
-          <label>
-            <span>Overlap penalty</span>
-            <input type="range" id="w-overlap" min="0" max="100" value="60">
-          </label>
-          <label>
-            <span>Visual weight balance</span>
-            <input type="range" id="w-weight" min="0" max="100" value="50">
-          </label>
-        </section>
+          <section>
+            <h2>Harmony Weights</h2>
+            <label>
+              <span>Colour balance</span>
+              <input type="range" id="w-color" min="0" max="100" value="50">
+            </label>
+            <label>
+              <span>Spatial distribution</span>
+              <input type="range" id="w-spatial" min="0" max="100" value="50">
+            </label>
+            <label>
+              <span>Size-luminosity rule</span>
+              <input type="range" id="w-lum" min="0" max="100" value="70">
+            </label>
+            <label>
+              <span>Overlap penalty</span>
+              <input type="range" id="w-overlap" min="0" max="100" value="60">
+            </label>
+            <label>
+              <span>Visual weight balance</span>
+              <input type="range" id="w-weight" min="0" max="100" value="50">
+            </label>
+          </section>
 
-        <section>
-          <h2>Background</h2>
-          <input type="color" id="bg-color" value="#FAFAF5">
-        </section>
+          <section>
+            <h2>Background</h2>
+            <input type="color" id="bg-color" value="#FAFAF5">
+          </section>
+        </div>
 
         <div id="buttons">
           <button id="btn-start">Evolve</button>

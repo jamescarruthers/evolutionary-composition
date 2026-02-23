@@ -76,11 +76,35 @@ aside#controls {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
   max-height: calc(100vh - 120px);
+}
+
+.controls-scroll {
+  flex: 1;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--accent) transparent;
+  padding-bottom: 8px;
+}
+
+.controls-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.controls-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.controls-scroll::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.controls-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover);
 }
 
 aside section {
@@ -88,6 +112,7 @@ aside section {
   border-radius: var(--radius);
   padding: 14px;
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 aside section h2 {
@@ -235,6 +260,12 @@ output {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  flex-shrink: 0;
+  margin-top: 16px;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding-top: 8px;
 }
 
 #buttons button {
